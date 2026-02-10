@@ -16,6 +16,8 @@
     "build:packages": "npm --workspace packages/protocol run build && npm --workspace packages/client-sdk run build && npm --workspace packages/ui run build"
   },
   "devDependencies": {
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/parser": "^8.46.2"
   }
 }
