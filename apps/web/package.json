@@ -13,7 +13,7 @@
   "dependencies": {
     "@relaychat/ui": "file:../../packages/ui",
     "react": "^19.2.4",
-    "react-dom": "^18.2.0"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.13",
