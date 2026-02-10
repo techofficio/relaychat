@@ -13,6 +13,7 @@ import {
   PresenceRecord,
   PresenceState,
   ServerRecord,
+  ThemeMode,
   WorkspaceState
 } from "./workspace-types";
 
@@ -73,6 +74,7 @@ export type WorkspaceActions = {
   leaveMediaSessions: () => void;
   importDiscordExport: (raw: string) => ImportReport | null;
   setAutoApproval: (enabled: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   submitAgentRequest: (payload: {
     name: string;
     purpose: string;
@@ -98,6 +100,7 @@ export type WorkspaceModel = {
   typingUsers: string[];
   presenceIndex: Record<string, PresenceRecord>;
   notificationMode: NotificationMode | null;
+  themeMode: ThemeMode;
   actions: WorkspaceActions;
 };
 
@@ -333,7 +336,8 @@ function createDefaultState(): WorkspaceState {
       defaultServerMode: "all",
       defaultDirectMode: "mentions",
       channelOverrides: {}
-    }
+    },
+    themeMode: "dark"
   };
 }
 
@@ -403,7 +407,8 @@ function normalizeState(parsed: Partial<WorkspaceState>): WorkspaceState | null 
             parsed.notificationSettings.defaultDirectMode ?? "mentions",
           channelOverrides: parsed.notificationSettings.channelOverrides ?? {}
         }
-      : fallback.notificationSettings
+      : fallback.notificationSettings,
+    themeMode: parsed.themeMode === "light" ? "light" : "dark"
   };
 }
 
@@ -1340,6 +1345,18 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
         }));
       },
 
+      setThemeMode: (mode) => {
+        setState((prev) => {
+          if (prev.themeMode === mode) {
+            return prev;
+          }
+          return {
+            ...prev,
+            themeMode: mode
+          };
+        });
+      },
+
       submitAgentRequest: (payload) => {
         const name = payload.name.trim();
         const purpose = payload.purpose.trim();
@@ -1420,6 +1437,7 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
     typingUsers,
     presenceIndex,
     notificationMode,
+    themeMode: state.themeMode,
     actions
   };
 }

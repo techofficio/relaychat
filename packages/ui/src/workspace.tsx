@@ -224,6 +224,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
     typingUsers,
     presenceIndex,
     notificationMode,
+    themeMode,
     actions
   } = useWorkspaceState({ persistence: props.persistence });
 
@@ -344,7 +345,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
   };
 
   return (
-    <div className="dr-root">
+    <div className={`dr-root dr-theme-${themeMode}`}>
       <header className="dr-topbar">
         <div>
           <h1>RelayChat</h1>
@@ -352,14 +353,33 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
             {props.platform.toUpperCase()} | local-first + relay hybrid | policy-aware Relay Agents
           </p>
         </div>
-        <form className="dr-inline-form" onSubmit={submitProfile}>
-          <input
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            placeholder="Display name"
-          />
-          <button type="submit">Set Name</button>
-        </form>
+        <div className="dr-topbar-controls">
+          <div className="dr-actions dr-theme-toggle">
+            <span className="dr-muted">Theme</span>
+            <button
+              type="button"
+              className={themeMode === "dark" ? "dr-chip dr-chip-active" : "dr-chip"}
+              onClick={() => actions.setThemeMode("dark")}
+            >
+              Dark
+            </button>
+            <button
+              type="button"
+              className={themeMode === "light" ? "dr-chip dr-chip-active" : "dr-chip"}
+              onClick={() => actions.setThemeMode("light")}
+            >
+              Light
+            </button>
+          </div>
+          <form className="dr-inline-form" onSubmit={submitProfile}>
+            <input
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="Display name"
+            />
+            <button type="submit">Set Name</button>
+          </form>
+        </div>
       </header>
 
       <section className="dr-layout">

@@ -1,7 +1,3 @@
-:root {
-  color-scheme: light;
-}
-
 html,
 body,
 #root {
@@ -11,4 +7,5 @@ body,
 
 body {
   min-height: 100vh;
+  background: #04070d;
 }

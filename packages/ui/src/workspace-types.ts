@@ -3,6 +3,7 @@ export type NetworkExposureMode = "RelayOnly" | "Hybrid";
 export type ChannelKind = "server" | "direct";
 export type PresenceState = "online" | "idle" | "dnd" | "offline";
 export type NotificationMode = "all" | "mentions" | "mute";
+export type ThemeMode = "dark" | "light";
 
 export type AgentCapability =
   | "ReadChannel"
@@ -121,4 +122,5 @@ export interface WorkspaceState {
   typing: Record<string, string[]>;
   presence: Record<string, PresenceRecord>;
   notificationSettings: NotificationSettings;
+  themeMode: ThemeMode;
 }

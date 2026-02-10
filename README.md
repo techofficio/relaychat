@@ -87,6 +87,7 @@ npm run dev:mobile
 - Naming and voice: `NAME.md`
 - Security baseline: `SECURITY.md`
 - Discord parity roadmap: `PARITY_ROADMAP.md`
+- Next feature + design roadmap: `NEXT_ROADMAP.md`
 - Release readiness checklist: `RELEASE_READINESS.md`
 - Protocol draft: `proto/README.md`
 
