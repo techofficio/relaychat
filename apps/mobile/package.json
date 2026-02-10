@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "expo": "^50.0.0",
+    "expo": "^54.0.33",
     "react": "^18.2.0",
     "react-native": "^0.83.1"
   },
