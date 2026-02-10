@@ -17,8 +17,7 @@
     "react-native": "^0.73.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-native": "^0.73.0",
+    "@types/react": "^19.2.13",
     "eslint": "^8.0.0",
     "typescript": "^5.5.0"
   }
