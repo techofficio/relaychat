@@ -1,11 +1,10 @@
 use argon2::Argon2;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use chacha20poly1305::{
-    aead::{Aead, KeyInit, OsRng},
+    aead::{rand_core::RngCore, Aead, KeyInit, OsRng},
     ChaCha20Poly1305, Nonce,
 };
 use ed25519_dalek::{Signature as DalekSignature, Signer, SigningKey, Verifier, VerifyingKey};
-use rand::RngCore;
 use relaychat_core::{PublicKey, Signature, SignedRecord, Timestamp};
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +25,8 @@ pub struct DeviceKeypair {
 impl DeviceKeypair {
     pub fn generate() -> Self {
         let mut secret = [0u8; 32];
-        rand::thread_rng().fill_bytes(&mut secret);
+        let mut rng = OsRng;
+        rng.fill_bytes(&mut secret);
         Self {
             signing_key: SigningKey::from_bytes(&secret),
         }
@@ -114,13 +114,14 @@ pub fn export_recovery_kit(
     passphrase: &str,
 ) -> Result<RecoveryKit, CryptoError> {
     let mut salt = [0u8; 16];
-    OsRng.fill_bytes(&mut salt);
+    let mut rng = OsRng;
+    rng.fill_bytes(&mut salt);
 
     let key = derive_key(passphrase, &salt)?;
     let cipher = ChaCha20Poly1305::new((&key).into());
 
     let mut nonce = [0u8; 12];
-    OsRng.fill_bytes(&mut nonce);
+    rng.fill_bytes(&mut nonce);
 
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce), private_key_bytes.as_ref())
