@@ -345,23 +345,24 @@ function normalizeState(parsed: Partial<WorkspaceState>): WorkspaceState | null 
   const fallback = createDefaultState();
 
   const servers = parsed.servers.map((server) => ({
-    defaultChannelPrivacy: "ServerReadable" as ChannelPrivacy,
-    networkExposureMode: "RelayOnly" as const,
-    redactClientIp: true,
-    ...server
+    ...server,
+    defaultChannelPrivacy:
+      server.defaultChannelPrivacy ?? ("ServerReadable" as ChannelPrivacy),
+    networkExposureMode: server.networkExposureMode ?? ("RelayOnly" as const),
+    redactClientIp: server.redactClientIp ?? true
   }));
 
   const channels = parsed.channels.map((channel) => ({
-    privacy: "ServerReadable" as ChannelPrivacy,
-    kind: "server" as const,
-    isThread: false,
-    ...channel
+    ...channel,
+    privacy: channel.privacy ?? ("ServerReadable" as ChannelPrivacy),
+    kind: channel.kind ?? ("server" as const),
+    isThread: channel.isThread ?? false
   }));
 
   const messages = Array.isArray(parsed.messages)
     ? parsed.messages.map((message) => ({
-        reactions: [],
-        ...message
+        ...message,
+        reactions: message.reactions ?? []
       }))
     : fallback.messages;
 
@@ -372,8 +373,8 @@ function normalizeState(parsed: Partial<WorkspaceState>): WorkspaceState | null 
     agents: Array.isArray(parsed.agents) ? parsed.agents : fallback.agents,
     agentPolicy: parsed.agentPolicy
       ? {
-          maxEventsPerMinute: 12,
-          ...parsed.agentPolicy
+          ...parsed.agentPolicy,
+          maxEventsPerMinute: parsed.agentPolicy.maxEventsPerMinute ?? 12
         }
       : fallback.agentPolicy,
     profile: parsed.profile ?? fallback.profile,
@@ -395,10 +396,12 @@ function normalizeState(parsed: Partial<WorkspaceState>): WorkspaceState | null 
     presence: parsed.presence ?? fallback.presence,
     notificationSettings: parsed.notificationSettings
       ? {
-          defaultServerMode: "all",
-          defaultDirectMode: "mentions",
-          channelOverrides: {},
-          ...parsed.notificationSettings
+          ...parsed.notificationSettings,
+          defaultServerMode:
+            parsed.notificationSettings.defaultServerMode ?? "all",
+          defaultDirectMode:
+            parsed.notificationSettings.defaultDirectMode ?? "mentions",
+          channelOverrides: parsed.notificationSettings.channelOverrides ?? {}
         }
       : fallback.notificationSettings
   };
