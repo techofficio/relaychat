@@ -1,0 +1,21 @@
+{
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devPath": "http://localhost:5174",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "RelayChat",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "windows": [
+      {
+        "title": "RelayChat",
+        "width": 1200,
+        "height": 800
+      }
+    ]
+  }
+}

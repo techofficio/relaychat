@@ -1,0 +1,28 @@
+name: Security report
+description: Report a security/privacy issue (non-sensitive)
+labels: [security]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include exploit details for critical issues in public issues.
+        For sensitive issues, use the private channel documented in SECURITY.md.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: High-level description of the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: affected
+    attributes:
+      label: Affected components
+      description: Paths, endpoints, or features impacted.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Confidentiality, integrity, availability impact.

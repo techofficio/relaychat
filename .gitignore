@@ -1,0 +1,22 @@
+# Rust
+/target
+**/target
+
+# Node
+/node_modules
+**/node_modules
+/npm-debug.log*
+/pnpm-debug.log*
+/yarn-error.log*
+
+# Vite
+**/dist
+
+# Tauri
+**/src-tauri/target
+
+# Expo
+**/.expo
+
+# OS
+.DS_Store

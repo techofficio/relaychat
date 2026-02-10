@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a functional or reliability issue
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide exact steps and inputs.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, browser/app version, and network mode.

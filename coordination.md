@@ -1,0 +1,38 @@
+# Multi-Agent Coordination
+
+This file is the single source of truth for active work claims in this repository.
+
+## Rules
+
+1. Before changing code, add or update a task row with `IN_PROGRESS` and list exact file paths.
+2. Do not edit files claimed by another active task unless the owner marks it `BLOCKED` or `HANDOFF`.
+3. If your scope changes, update your row first, then edit files.
+4. When done, set status to `DONE` and add a short handoff note.
+5. Do not delete prior rows; keep history by marking old rows `DONE` or `CANCELLED`.
+
+## Status Values
+
+- `IN_PROGRESS`: actively being edited
+- `BLOCKED`: waiting on dependency/decision
+- `HANDOFF`: ready for another agent to continue
+- `DONE`: completed and ready for review
+- `CANCELLED`: intentionally stopped
+
+## Active Task Ledger
+
+| Task ID | Owner | Status | Scope | Files | Started (UTC) | Last Update (UTC) | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| RC-003 | codex-agent | DONE | Presence/typing protocol + relay endpoints + mobile notification parity + unread reconciliation tests | `crates/net/src/lib.rs`, `crates/net/Cargo.toml`, `crates/relay-node/src/main.rs`, `packages/protocol/src/index.ts`, `packages/client-sdk/src/index.ts`, `crates/store/src/lib.rs`, `apps/mobile/App.tsx`, `proto/README.md`, `README.md`, `CONTRIBUTING.md` | 2026-02-10T18:43:10Z | 2026-02-10T18:49:03Z | Implemented. Validation blocker: cargo tests require crates.io access (`argon2`) in this environment. |
+| RC-004 | codex-agent | IN_PROGRESS | Git bootstrap and publish-readiness prep | `.git/`, `coordination.md` | 2026-02-10T18:55:03Z | 2026-02-10T18:55:03Z | Initialize repo and create baseline commit aligned with mission scope. |
+
+## New Task Template
+
+Add one row to the ledger with:
+
+- Task ID: unique (example `RC-004`)
+- Owner: agent/user identifier
+- Status: one of the values above
+- Scope: one-line objective
+- Files: comma-separated paths to be edited
+- Started/Last Update: UTC ISO timestamp
+- Notes: risks, blockers, or handoff details
