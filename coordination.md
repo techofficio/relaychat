@@ -26,6 +26,7 @@ This file is the single source of truth for active work claims in this repositor
 | RC-004 | codex-agent | DONE | Git bootstrap and publish-readiness prep | `.git/`, `coordination.md` | 2026-02-10T18:55:03Z | 2026-02-10T18:57:13Z | Initialized git, created `codex/bootstrap`, committed baseline (`4b3d53a`). |
 | RC-005 | codex-agent | DONE | Configure GitHub remote and push branch | `.git/config`, `coordination.md` | 2026-02-10T18:58:41Z | 2026-02-10T19:05:50Z | `origin` configured and `codex/bootstrap` pushed to GitHub successfully. |
 | RC-006 | codex-agent | DONE | Secret/key leak prevention hardening for public repo | `.gitignore`, `CONTRIBUTING.md`, `coordination.md` | 2026-02-10T19:06:47Z | 2026-02-10T19:07:43Z | Added key/env ignore guards and pre-push secret scan guidance; no key-like material found in tracked files/history scans. |
+| RC-007 | codex-agent | DONE | Restore local install reliability for browser testing in this environment | `apps/web/package.json`, `apps/desktop/package.json`, `packages/client-sdk/package.json`, `coordination.md` | 2026-02-10T19:08:23Z | 2026-02-10T19:10:27Z | Switched internal deps to `file:` links; no parallel-agent ownership conflicts detected. |
 
 ## New Task Template
 
