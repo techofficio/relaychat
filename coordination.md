@@ -25,6 +25,7 @@ This file is the single source of truth for active work claims in this repositor
 | RC-003 | codex-agent | DONE | Presence/typing protocol + relay endpoints + mobile notification parity + unread reconciliation tests | `crates/net/src/lib.rs`, `crates/net/Cargo.toml`, `crates/relay-node/src/main.rs`, `packages/protocol/src/index.ts`, `packages/client-sdk/src/index.ts`, `crates/store/src/lib.rs`, `apps/mobile/App.tsx`, `proto/README.md`, `README.md`, `CONTRIBUTING.md` | 2026-02-10T18:43:10Z | 2026-02-10T18:49:03Z | Implemented. Validation blocker: cargo tests require crates.io access (`argon2`) in this environment. |
 | RC-004 | codex-agent | DONE | Git bootstrap and publish-readiness prep | `.git/`, `coordination.md` | 2026-02-10T18:55:03Z | 2026-02-10T18:57:13Z | Initialized git, created `codex/bootstrap`, committed baseline (`4b3d53a`). |
 | RC-005 | codex-agent | DONE | Configure GitHub remote and push branch | `.git/config`, `coordination.md` | 2026-02-10T18:58:41Z | 2026-02-10T19:05:50Z | `origin` configured and `codex/bootstrap` pushed to GitHub successfully. |
+| RC-006 | codex-agent | DONE | Secret/key leak prevention hardening for public repo | `.gitignore`, `CONTRIBUTING.md`, `coordination.md` | 2026-02-10T19:06:47Z | 2026-02-10T19:07:43Z | Added key/env ignore guards and pre-push secret scan guidance; no key-like material found in tracked files/history scans. |
 
 ## New Task Template
 
