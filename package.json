@@ -14,5 +14,8 @@
     "lint": "npm --workspaces run lint",
     "typecheck": "npm --workspaces run typecheck",
     "build:packages": "npm --workspace packages/protocol run build && npm --workspace packages/client-sdk run build && npm --workspace packages/ui run build"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.46.2"
   }
 }
