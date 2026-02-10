@@ -88,7 +88,6 @@ npm run dev:mobile
 - Security baseline: `SECURITY.md`
 - Discord parity roadmap: `PARITY_ROADMAP.md`
 - Release readiness checklist: `RELEASE_READINESS.md`
-- Multi-agent coordination process: `coordination.md`
 - Protocol draft: `proto/README.md`
 
 ## Contributing
@@ -98,7 +97,6 @@ If you want to help build the next generation of community communication infrast
 1. Read `MISSION.md` and `PARITY_ROADMAP.md`.
 2. Pick an issue or propose a roadmap-aligned improvement.
 3. Follow contribution and security workflow in `CONTRIBUTING.md`.
-4. Coordinate active tasks in `coordination.md`.
 
 ## Repository Governance
 

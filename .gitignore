@@ -37,3 +37,6 @@ id_ed25519
 id_ed25519.pub
 *.secrets
 secrets/
+
+# Local-only coordination
+coordination.md
