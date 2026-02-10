@@ -104,10 +104,32 @@ export interface ImportReport {
   importedAt: string;
 }
 
+export type ModerationAction =
+  | "MessageDeleted"
+  | "MessagePinned"
+  | "MessageUnpinned"
+  | "ThreadCreated"
+  | "ChannelPrivacyChanged"
+  | "AgentApproved"
+  | "AgentRejected"
+  | "AgentPolicyUpdated";
+
+export interface ModerationLogRecord {
+  id: string;
+  at: string;
+  actor: string;
+  action: ModerationAction;
+  summary: string;
+  serverId?: string;
+  channelId?: string;
+  targetId?: string;
+}
+
 export interface WorkspaceState {
   servers: ServerRecord[];
   channels: ChannelRecord[];
   messages: MessageRecord[];
+  moderationLog: ModerationLogRecord[];
   agents: AgentRecord[];
   agentPolicy: AgentPolicyRecord;
   profile: UserProfile;

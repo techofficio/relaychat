@@ -35,6 +35,36 @@ function notificationModeLabel(mode: NotificationMode): string {
   return "Mute";
 }
 
+function formatUnreadBadge(unread: number, mentions: number): string | null {
+  if (unread <= 0 && mentions <= 0) {
+    return null;
+  }
+  if (mentions > 0 && unread > 0) {
+    return `@${mentions} / ${unread}`;
+  }
+  if (mentions > 0) {
+    return `@${mentions}`;
+  }
+  return `${unread}`;
+}
+
+function messageMentionsSelf(body: string, displayName: string): boolean {
+  const cleaned = displayName.trim().toLowerCase();
+  if (!cleaned) {
+    return false;
+  }
+
+  const escaped = cleaned.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const normalized = body.toLowerCase();
+  const atMentionPattern = new RegExp(`(^|\\W)@${escaped}(\\W|$)`);
+  if (atMentionPattern.test(normalized)) {
+    return true;
+  }
+
+  const plainMentionPattern = new RegExp(`(^|\\W)${escaped}(\\W|$)`);
+  return plainMentionPattern.test(normalized);
+}
+
 function MessageComposer(props: {
   onSend: (value: SendMessageInput) => void;
   replyTo?: MessageRecord;
@@ -83,6 +113,7 @@ function MessageCard(props: {
   message: MessageRecord;
   replyTarget?: MessageRecord;
   allowThread: boolean;
+  mentionsSelf: boolean;
   authorPresence?: PresenceState;
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string) => void;
@@ -107,7 +138,7 @@ function MessageCard(props: {
   };
 
   return (
-    <article className="dr-message-card">
+    <article className={props.mentionsSelf ? "dr-message-card dr-message-mention" : "dr-message-card"}>
       <header>
         <span className="dr-message-author">
           <span className={presenceClass(props.authorPresence)} />
@@ -221,8 +252,12 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
     approvedAgents,
     unreadByChannel,
     mentionByChannel,
+    totalUnread,
+    totalMentions,
     typingUsers,
     presenceIndex,
+    recentMentions,
+    moderationTimeline,
     notificationMode,
     themeMode,
     actions
@@ -354,6 +389,19 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
           </p>
         </div>
         <div className="dr-topbar-controls">
+          <div className="dr-stat-strip">
+            <span className="dr-chip dr-chip-active">Unread {totalUnread}</span>
+            <span className="dr-chip">Mentions {totalMentions}</span>
+            <button type="button" className="dr-ghost" onClick={() => actions.markAllRead("server")}>
+              Read Server
+            </button>
+            <button type="button" className="dr-ghost" onClick={() => actions.markAllRead("direct")}>
+              Read DMs
+            </button>
+            <button type="button" className="dr-ghost" onClick={() => actions.markAllRead("all")}>
+              Read All
+            </button>
+          </div>
           <div className="dr-actions dr-theme-toggle">
             <span className="dr-muted">Theme</span>
             <button
@@ -429,6 +477,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
               visibleDirectChannels.map((channel) => {
                 const unread = unreadByChannel[channel.id] ?? 0;
                 const mentions = mentionByChannel[channel.id] ?? 0;
+                const badge = formatUnreadBadge(unread, mentions);
                 return (
                   <button
                     key={channel.id}
@@ -440,11 +489,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
                   >
                     <span className="dr-item-row">
                       <span>{channel.isGroupDirect ? "@" : "DM"} {channel.name}</span>
-                      {unread > 0 ? (
-                        <span className="dr-unread">
-                          {mentions > 0 ? `@${mentions} / ${unread}` : unread}
-                        </span>
-                      ) : null}
+                      {badge ? <span className="dr-unread">{badge}</span> : null}
                     </span>
                   </button>
                 );
@@ -483,6 +528,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
             {visibleChannels.map((channel) => {
               const unread = unreadByChannel[channel.id] ?? 0;
               const mentions = mentionByChannel[channel.id] ?? 0;
+              const badge = formatUnreadBadge(unread, mentions);
               return (
                 <button
                   key={channel.id}
@@ -498,11 +544,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
                       {channel.name}
                       <span className="dr-muted"> {channelPrivacyLabel(channel.privacy)}</span>
                     </span>
-                    {unread > 0 ? (
-                      <span className="dr-unread">
-                        {mentions > 0 ? `@${mentions} / ${unread}` : unread}
-                      </span>
-                    ) : null}
+                    {badge ? <span className="dr-unread">{badge}</span> : null}
                   </span>
                 </button>
               );
@@ -583,6 +625,34 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
             </div>
           ) : null}
 
+          {recentMentions.length > 0 ? (
+            <div className="dr-inline-banner">
+              Mention inbox:
+              {recentMentions.slice(0, 3).map((message) => (
+                <button
+                  key={`mention-${message.id}`}
+                  type="button"
+                  className="dr-ghost"
+                  onClick={() => {
+                    const targetChannel = state.channels.find(
+                      (channel) => channel.id === message.channelId
+                    );
+                    if (!targetChannel) {
+                      return;
+                    }
+                    if (targetChannel.kind === "direct") {
+                      actions.selectDirectChannel(targetChannel.id);
+                      return;
+                    }
+                    actions.selectChannel(targetChannel.id);
+                  }}
+                >
+                  {message.author}: {message.body.slice(0, 30)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="dr-messages">
             {channelMessages.length === 0 ? (
               <p className="dr-muted">No messages yet.</p>
@@ -592,6 +662,7 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
                   key={message.id}
                   message={message}
                   allowThread={selectedChannel?.kind === "server"}
+                  mentionsSelf={messageMentionsSelf(message.body, state.profile.displayName)}
                   authorPresence={presenceIndex[message.author]?.state}
                   replyTarget={
                     message.replyToId
@@ -709,6 +780,23 @@ export function WorkspaceApp(props: { platform: "web" | "desktop"; persistence?:
                   <span className="dr-muted">
                     Approved {agent.reviewedAt ? formatTimestamp(agent.reviewedAt) : ""}
                   </span>
+                </article>
+              ))
+            )}
+          </div>
+
+          <h3>Moderation Timeline</h3>
+          <div className="dr-list dr-moderation-log">
+            {moderationTimeline.length === 0 ? (
+              <p className="dr-muted">No moderation events yet</p>
+            ) : (
+              moderationTimeline.map((event) => (
+                <article key={event.id} className="dr-card dr-log-entry">
+                  <strong>{event.action}</strong>
+                  <p>{event.summary}</p>
+                  <p className="dr-muted">
+                    {event.actor} • {formatTimestamp(event.at)}
+                  </p>
                 </article>
               ))
             )}

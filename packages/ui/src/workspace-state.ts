@@ -9,6 +9,7 @@ import {
   ChannelRecord,
   ImportReport,
   MessageRecord,
+  ModerationLogRecord,
   NotificationMode,
   PresenceRecord,
   PresenceState,
@@ -52,6 +53,7 @@ export type WorkspaceActions = {
   createDirectMessage: (participant: string) => void;
   createGroupDirect: (name: string, participantsRaw: string) => void;
   setNotificationMode: (channelId: string, mode: NotificationMode) => void;
+  markAllRead: (scope: "server" | "direct" | "all") => void;
   setTyping: (channelId: string, actor: string, isTyping: boolean) => void;
   setPresence: (user: string, presence: PresenceState) => void;
   simulateIncomingMessage: (payload: {
@@ -97,8 +99,12 @@ export type WorkspaceModel = {
   approvedAgents: AgentRecord[];
   unreadByChannel: Record<string, number>;
   mentionByChannel: Record<string, number>;
+  totalUnread: number;
+  totalMentions: number;
   typingUsers: string[];
   presenceIndex: Record<string, PresenceRecord>;
+  recentMentions: MessageRecord[];
+  moderationTimeline: ModerationLogRecord[];
   notificationMode: NotificationMode | null;
   themeMode: ThemeMode;
   actions: WorkspaceActions;
@@ -121,8 +127,16 @@ function includesMention(body: string, displayName: string): boolean {
   if (!cleaned) {
     return false;
   }
+
+  const escaped = cleaned.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const normalized = body.toLowerCase();
-  return normalized.includes(`@${cleaned}`) || normalized.includes(cleaned);
+  const atMentionPattern = new RegExp(`(^|\\W)@${escaped}(\\W|$)`);
+  if (atMentionPattern.test(normalized)) {
+    return true;
+  }
+
+  const plainMentionPattern = new RegExp(`(^|\\W)${escaped}(\\W|$)`);
+  return plainMentionPattern.test(normalized);
 }
 
 function resolveNotificationMode(
@@ -168,16 +182,31 @@ function applyIncomingUnread(
     mentions: { ...currentUnread.mentions }
   };
 
-  if (mode === "all") {
+  const mentioned = includesMention(body, self);
+
+  if (mode === "all" || (mode === "mentions" && mentioned)) {
     next.channels[channelId] = (next.channels[channelId] ?? 0) + 1;
   }
 
-  const mentioned = includesMention(body, self);
   if (mentioned && (mode === "all" || mode === "mentions")) {
     next.mentions[channelId] = (next.mentions[channelId] ?? 0) + 1;
   }
 
   return next;
+}
+
+function appendModerationLog(
+  state: WorkspaceState,
+  record: Omit<ModerationLogRecord, "id" | "at">
+): ModerationLogRecord[] {
+  return [
+    {
+      id: createId("audit"),
+      at: nowIso(),
+      ...record
+    },
+    ...state.moderationLog
+  ].slice(0, 250);
 }
 
 function createDefaultState(): WorkspaceState {
@@ -265,6 +294,16 @@ function createDefaultState(): WorkspaceState {
         body: "Can we align on migration support this week?",
         createdAt,
         reactions: []
+      }
+    ],
+    moderationLog: [
+      {
+        id: createId("audit"),
+        at: createdAt,
+        actor: "System",
+        action: "AgentPolicyUpdated",
+        summary: "Agent approval defaults to manual mode for this workspace.",
+        serverId
       }
     ],
     agents: [
@@ -374,6 +413,9 @@ function normalizeState(parsed: Partial<WorkspaceState>): WorkspaceState | null 
     servers,
     channels,
     messages,
+    moderationLog: Array.isArray(parsed.moderationLog)
+      ? parsed.moderationLog
+      : fallback.moderationLog,
     agents: Array.isArray(parsed.agents) ? parsed.agents : fallback.agents,
     agentPolicy: parsed.agentPolicy
       ? {
@@ -633,6 +675,14 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
 
   const unreadByChannel = state.unread.channels;
   const mentionByChannel = state.unread.mentions;
+  const totalUnread = React.useMemo(
+    () => Object.values(unreadByChannel).reduce((sum, count) => sum + count, 0),
+    [unreadByChannel]
+  );
+  const totalMentions = React.useMemo(
+    () => Object.values(mentionByChannel).reduce((sum, count) => sum + count, 0),
+    [mentionByChannel]
+  );
   const presenceIndex = state.presence;
   const typingUsers = React.useMemo(() => {
     if (!state.selectedChannelId) {
@@ -647,6 +697,28 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
     }
     return resolveNotificationMode(state, state.selectedChannelId);
   }, [state]);
+  const recentMentions = React.useMemo(() => {
+    const self = state.profile.displayName || DEFAULT_AUTHOR;
+    return state.messages
+      .filter(
+        (message) =>
+          !message.deletedAt &&
+          message.author !== self &&
+          includesMention(message.body, self)
+      )
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, 8);
+  }, [state.messages, state.profile.displayName]);
+  const moderationTimeline = React.useMemo(() => {
+    return state.moderationLog
+      .filter((record) => {
+        if (!state.selectedServerId) {
+          return true;
+        }
+        return record.serverId === state.selectedServerId;
+      })
+      .slice(0, 12);
+  }, [state.moderationLog, state.selectedServerId]);
 
   const actions = React.useMemo<WorkspaceActions>(
     () => ({
@@ -945,6 +1017,44 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
         });
       },
 
+      markAllRead: (scope) => {
+        setState((prev) => {
+          const targetChannelIds =
+            scope === "all"
+              ? prev.channels.map((channel) => channel.id)
+              : scope === "direct"
+                ? prev.channels
+                    .filter((channel) => channel.kind === "direct")
+                    .map((channel) => channel.id)
+                : prev.channels
+                    .filter(
+                      (channel) =>
+                        channel.kind === "server" &&
+                        channel.serverId === prev.selectedServerId
+                    )
+                    .map((channel) => channel.id);
+
+          if (targetChannelIds.length === 0) {
+            return prev;
+          }
+
+          const nextChannels = { ...prev.unread.channels };
+          const nextMentions = { ...prev.unread.mentions };
+          for (const channelId of targetChannelIds) {
+            nextChannels[channelId] = 0;
+            nextMentions[channelId] = 0;
+          }
+
+          return {
+            ...prev,
+            unread: {
+              channels: nextChannels,
+              mentions: nextMentions
+            }
+          };
+        });
+      },
+
       setTyping: (channelId, actor, isTyping) => {
         const cleanedActor = actor.trim();
         if (!cleanedActor) {
@@ -1061,17 +1171,35 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
       },
 
       setChannelPrivacy: (channelId, privacy) => {
-        setState((prev) => ({
-          ...prev,
-          channels: prev.channels.map((channel) =>
-            channel.id === channelId && channel.kind === "server"
-              ? {
-                  ...channel,
-                  privacy
-                }
-              : channel
-          )
-        }));
+        setState((prev) => {
+          const channel = prev.channels.find((entry) => entry.id === channelId);
+          if (!channel || channel.kind !== "server" || channel.privacy === privacy) {
+            return prev;
+          }
+
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
+          return {
+            ...prev,
+            channels: prev.channels.map((entry) =>
+              entry.id === channelId
+                ? {
+                    ...entry,
+                    privacy
+                  }
+                : entry
+            ),
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: "ChannelPrivacyChanged",
+              summary: `Set #${channel.name} privacy to ${
+                privacy === "EndToEndEncrypted" ? "E2EE" : "Server-Readable"
+              }.`,
+              serverId: channel.serverId,
+              channelId: channel.id,
+              targetId: channel.id
+            })
+          };
+        });
       },
 
       sendMessage: (input) => {
@@ -1141,31 +1269,64 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
       },
 
       deleteMessage: (messageId) => {
-        setState((prev) => ({
-          ...prev,
-          messages: prev.messages.map((message) =>
-            message.id === messageId
-              ? {
-                  ...message,
-                  deletedAt: nowIso()
-                }
-              : message
-          )
-        }));
+        setState((prev) => {
+          const message = prev.messages.find((entry) => entry.id === messageId);
+          if (!message || message.deletedAt) {
+            return prev;
+          }
+          const channel = prev.channels.find((entry) => entry.id === message.channelId);
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
+          return {
+            ...prev,
+            messages: prev.messages.map((entry) =>
+              entry.id === messageId
+                ? {
+                    ...entry,
+                    deletedAt: nowIso()
+                  }
+                : entry
+            ),
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: "MessageDeleted",
+              summary: `Deleted message from ${message.author}.`,
+              serverId: channel?.kind === "server" ? channel.serverId : undefined,
+              channelId: message.channelId,
+              targetId: message.id
+            })
+          };
+        });
       },
 
       togglePin: (messageId) => {
-        setState((prev) => ({
-          ...prev,
-          messages: prev.messages.map((message) =>
-            message.id === messageId
-              ? {
-                  ...message,
-                  pinnedAt: message.pinnedAt ? undefined : nowIso()
-                }
-              : message
-          )
-        }));
+        setState((prev) => {
+          const message = prev.messages.find((entry) => entry.id === messageId);
+          if (!message || message.deletedAt) {
+            return prev;
+          }
+          const channel = prev.channels.find((entry) => entry.id === message.channelId);
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
+          const isPinned = Boolean(message.pinnedAt);
+          return {
+            ...prev,
+            messages: prev.messages.map((entry) =>
+              entry.id === messageId
+                ? {
+                    ...entry,
+                    pinnedAt: isPinned ? undefined : nowIso()
+                  }
+                : entry
+            ),
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: isPinned ? "MessageUnpinned" : "MessagePinned",
+              summary: `${isPinned ? "Unpinned" : "Pinned"} a message from ${message.author}.`,
+              serverId: channel?.kind === "server" ? channel.serverId : undefined,
+              channelId: message.channelId,
+              targetId: message.id
+            })
+          };
+        });
       },
 
       createThreadFromMessage: (messageId, name) => {
@@ -1192,6 +1353,7 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
           const timestamp = nowIso();
           const threadName =
             name?.trim() || `thread-${rootMessage.id.slice(rootMessage.id.length - 6)}`;
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
 
           return {
             ...prev,
@@ -1214,7 +1376,15 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
                     threadId: newThreadId ?? undefined
                   }
                 : message
-            )
+            ),
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: "ThreadCreated",
+              summary: `Created thread #${threadName} from a message in #${parentChannel.name}.`,
+              serverId: parentChannel.serverId,
+              channelId: parentChannel.id,
+              targetId: newThreadId ?? undefined
+            })
           };
         });
 
@@ -1336,13 +1506,25 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
       },
 
       setAutoApproval: (enabled) => {
-        setState((prev) => ({
-          ...prev,
-          agentPolicy: {
-            ...prev.agentPolicy,
-            autoApproval: enabled
+        setState((prev) => {
+          if (prev.agentPolicy.autoApproval === enabled) {
+            return prev;
           }
-        }));
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
+          return {
+            ...prev,
+            agentPolicy: {
+              ...prev.agentPolicy,
+              autoApproval: enabled
+            },
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: "AgentPolicyUpdated",
+              summary: `Set Relay Agent approval mode to ${enabled ? "auto" : "manual"}.`,
+              serverId: prev.selectedServerId ?? undefined
+            })
+          };
+        });
       },
 
       setThemeMode: (mode) => {
@@ -1387,35 +1569,63 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
       },
 
       approveAgent: (agentId) => {
-        setState((prev) => ({
-          ...prev,
-          agents: prev.agents.map((agent) =>
-            agent.id === agentId
-              ? {
-                  ...agent,
-                  status: "approved",
-                  reviewedAt: nowIso(),
-                  reviewedBy: prev.profile.displayName
-                }
-              : agent
-          )
-        }));
+        setState((prev) => {
+          const agent = prev.agents.find((entry) => entry.id === agentId);
+          if (!agent || agent.status === "approved") {
+            return prev;
+          }
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
+          return {
+            ...prev,
+            agents: prev.agents.map((entry) =>
+              entry.id === agentId
+                ? {
+                    ...entry,
+                    status: "approved",
+                    reviewedAt: nowIso(),
+                    reviewedBy: prev.profile.displayName
+                  }
+                : entry
+            ),
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: "AgentApproved",
+              summary: `Approved Relay Agent ${agent.name}.`,
+              serverId: prev.selectedServerId ?? undefined,
+              targetId: agent.id
+            })
+          };
+        });
       },
 
       rejectAgent: (agentId) => {
-        setState((prev) => ({
-          ...prev,
-          agents: prev.agents.map((agent) =>
-            agent.id === agentId
-              ? {
-                  ...agent,
-                  status: "rejected",
-                  reviewedAt: nowIso(),
-                  reviewedBy: prev.profile.displayName
-                }
-              : agent
-          )
-        }));
+        setState((prev) => {
+          const agent = prev.agents.find((entry) => entry.id === agentId);
+          if (!agent || agent.status === "rejected") {
+            return prev;
+          }
+          const actor = prev.profile.displayName || DEFAULT_AUTHOR;
+          return {
+            ...prev,
+            agents: prev.agents.map((entry) =>
+              entry.id === agentId
+                ? {
+                    ...entry,
+                    status: "rejected",
+                    reviewedAt: nowIso(),
+                    reviewedBy: prev.profile.displayName
+                  }
+                : entry
+            ),
+            moderationLog: appendModerationLog(prev, {
+              actor,
+              action: "AgentRejected",
+              summary: `Rejected Relay Agent ${agent.name}.`,
+              serverId: prev.selectedServerId ?? undefined,
+              targetId: agent.id
+            })
+          };
+        });
       }
     }),
     []
@@ -1434,8 +1644,12 @@ export function useWorkspaceState(options: WorkspaceStateOptions = {}): Workspac
     approvedAgents,
     unreadByChannel,
     mentionByChannel,
+    totalUnread,
+    totalMentions,
     typingUsers,
     presenceIndex,
+    recentMentions,
+    moderationTimeline,
     notificationMode,
     themeMode: state.themeMode,
     actions

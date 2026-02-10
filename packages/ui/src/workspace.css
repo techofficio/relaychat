@@ -84,6 +84,14 @@
   gap: 10px;
 }
 
+.dr-stat-strip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
 .dr-theme-toggle {
   margin: 0;
 }
@@ -263,6 +271,11 @@
   background: rgba(246, 252, 255, 0.9);
 }
 
+.dr-message-mention {
+  border-color: rgba(26, 200, 255, 0.75);
+  box-shadow: 0 0 0 1px rgba(26, 200, 255, 0.24);
+}
+
 .dr-message-card header {
   display: flex;
   justify-content: space-between;
@@ -326,6 +339,10 @@
   justify-content: space-between;
 }
 
+.dr-inline-banner .dr-ghost {
+  margin: 0;
+}
+
 .dr-actions {
   display: flex;
   gap: 8px;
@@ -387,6 +404,15 @@ button:hover {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.dr-moderation-log {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.dr-log-entry {
+  border-left: 2px solid var(--dr-brand);
 }
 
 .dr-policy-row {
@@ -456,5 +482,9 @@ button:hover {
   .dr-layout {
     grid-template-columns: 1fr;
     min-height: auto;
+  }
+
+  .dr-stat-strip {
+    justify-content: flex-start;
   }
 }
