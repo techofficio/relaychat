@@ -6,13 +6,6 @@
 2. Keep changes scoped and include tests or validation notes.
 3. Open a pull request using the PR template.
 
-## Multi-agent coordination
-
-1. Before editing files, claim your task in `coordination.md` and set status to `IN_PROGRESS`.
-2. List exact file paths you plan to edit and update the row before scope changes.
-3. Do not edit files owned by another active task unless the row is `BLOCKED` or `HANDOFF`.
-4. When finished, mark your row `DONE` (or `HANDOFF` with clear next steps).
-
 ## Local checks
 
 Run before opening a PR:
