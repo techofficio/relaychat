@@ -10,6 +10,6 @@
     "lint": "echo \"client-sdk package has no eslint config yet\""
   },
   "dependencies": {
-    "@relaychat/protocol": "workspace:*"
+    "@relaychat/protocol": "file:../protocol"
   }
 }

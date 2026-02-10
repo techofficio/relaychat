@@ -4,9 +4,13 @@ module.exports = {
     browser: true,
     es2021: true
   },
+  parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaVersion: "latest",
-    sourceType: "module"
+    sourceType: "module",
+    ecmaFeatures: {
+      jsx: true
+    }
   },
   plugins: ["react-hooks", "react-refresh"],
   extends: [],
