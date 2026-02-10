@@ -40,6 +40,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Ensure native bundler binaries (Linux)
+        if: runner.os == 'Linux'
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu @esbuild/linux-x64
+
       - name: Lint
         run: npm run lint
 
